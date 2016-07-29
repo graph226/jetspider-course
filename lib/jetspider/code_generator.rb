@@ -83,7 +83,11 @@ module JetSpider
     #
 
     def visit_FunctionCallNode(n)
-      raise NotImplementedError, 'FunctionCallNode'
+      @asm.callgname n.value.value
+      n.arguments.value.each do |node|
+        visit node
+      end
+      @asm.call n.arguments.value.size
     end
 
     def visit_FunctionDeclNode(n)
@@ -97,7 +101,8 @@ module JetSpider
     def visit_FunctionExprNode(n) raise "FunctionExprNode not implemented"; end
 
     def visit_ReturnNode(n)
-      raise NotImplementedError, 'ReturnNode'
+      visit n.value
+      @asm.return
     end
 
     # These nodes should not be visited directly
@@ -110,7 +115,7 @@ module JetSpider
     #
 
     def visit_ResolveNode(n)
-      raise NotImplementedError, 'ResolveNode'
+      @asm.getarg(n.variable.index)
     end
 
     def visit_OpEqualNode(n)
@@ -154,7 +159,15 @@ module JetSpider
     end
 
     def visit_ConditionalNode(n)
-      raise NotImplementedError, 'ConditinalNode'
+      loc_ifeq = @asm.lazy_location
+      loc_goto = @asm.lazy_location
+      visit n.conditions
+      @asm.ifeq loc_ifeq
+      visit n.value
+      @asm.goto loc_goto
+      @asm.fix_location loc_ifeq
+      visit n.else
+      @asm.fix_location loc_goto
     end
 
     def visit_WhileNode(n)
@@ -197,7 +210,11 @@ module JetSpider
       visit n.value
     end
 
+    def constant?()
+    end
+
     def visit_AddNode(n)
+      binding.pry
       visit n.left
       visit n.value
       @asm.add
@@ -310,7 +327,11 @@ module JetSpider
     end
 
     def visit_NumberNode(n)
-      @asm.int8 n.value
+      if n.value == 1
+        @asm.one
+      else
+        @asm.int8 n.value
+      end
     end
 
     def visit_StringNode(n)
